@@ -1,8 +1,8 @@
 services:
   - type: web
     name: legal-faq-backend
-    env: java              # This tells Render it's a Java app
-    rootDir: backend       # Points to your backend folder
+    runtime: java
+    rootDir: backend
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
     plan: free
