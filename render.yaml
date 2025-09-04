@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: legal-faq-backend
-    runtime: java
-    rootDir: backend
-    buildCommand: ./mvnw clean package -DskipTests
-    startCommand: java -jar target/*.jar
-    plan: free
