@@ -1,7 +1,7 @@
 services:
   - type: web
     name: legal-faq-backend
-    env: java
+    runtime: java
     rootDir: backend
     buildCommand: ./mvnw clean package -DskipTests
     startCommand: java -jar target/*.jar
@@ -9,4 +9,3 @@ services:
     envVars:
       - key: PORT
         value: 8080
-
