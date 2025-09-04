@@ -1,42 +1,36 @@
-# ===============================
-# Stage 1: Build the application
-# ===============================
+# Step 1: Use an official JDK as build environment
 FROM eclipse-temurin:21-jdk AS build
 
-# Set working directory
+# Step 2: Set working directory inside the container
 WORKDIR /app
 
-# Copy Maven wrapper and config
+# Step 3: Copy Maven wrapper and config
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Make mvnw executable (fix for permission denied)
+# Step 4: Give execution permission to mvnw
 RUN chmod +x mvnw
 
-# Download dependencies (caches them)
-RUN ./mvnw dependency:go-offline
+# Step 5: Download dependencies (offline cache)
+RUN ./mvnw dependency:go-offline -B
 
-# Copy the source code
+# Step 6: Copy the entire source code
 COPY src src
 
-# Build the application (skip tests for faster build)
-RUN ./mvnw clean package -DskipTests
+# Step 7: Build the application JAR
+RUN ./mvnw package -DskipTests
 
+# Step 8: Use a lightweight JRE for running the app
+FROM eclipse-temurin:21-jre
 
-# ===============================
-# Stage 2: Run the application
-# ===============================
-FROM eclipse-temurin:21-jre AS run
-
-# Set working directory
 WORKDIR /app
 
-# Copy the built JAR file from the build stage
+# Copy the built jar from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose port (Render will map this automatically)
+# Expose port (Render uses $PORT automatically)
 EXPOSE 8080
 
-# Start the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the application
+ENTRYPOINT ["java","-jar","app.jar"]
