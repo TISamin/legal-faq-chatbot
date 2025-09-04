@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Legal FAQ Chatbot</</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <header>
+      <h2>⚖️ Legal FAQ Chatbot</h2>
+      <select id="language">
+        <option value="EN">English</option>
+        <option value="BN">বাংলা</option>
+      </select>
+    </header>
+
+    <div id="chat-window" class="chat-window" aria-live="polite"></div>
+
+    <div class="input-container">
+      <input type="text" id="user-input" placeholder="Type your legal question..." aria-label="Your question">
+      <button id="send-btn" aria-label="Send message">Send</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

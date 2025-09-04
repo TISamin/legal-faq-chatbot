@@ -1,0 +1,5 @@
+com\example\faq\repository\FaqRepository.class
+com\example\faq\service\FaqService.class
+com\example\faq\controller\FaqController.class
+com\example\faq\LegalFaqChatbotApplication.class
+com\example\faq\model\Faq.class
