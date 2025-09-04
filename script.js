@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8080/api/faq"; // backend base
+const API_URL = "https://legal-faq-chatbot.onrender.com/api/faq"; // backend base (Render)
 
 document.getElementById("send-btn").addEventListener("click", sendMessage);
 document.getElementById("user-input").addEventListener("keypress", function(e) {
