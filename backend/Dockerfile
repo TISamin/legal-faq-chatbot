@@ -1,32 +1,42 @@
-# Step 1: Use an official JDK base image
+# ===============================
+# Stage 1: Build the application
+# ===============================
 FROM eclipse-temurin:21-jdk AS build
 
-# Step 2: Set the working directory
+# Set working directory
 WORKDIR /app
 
-# Step 3: Copy Maven wrapper and pom.xml
+# Copy Maven wrapper and config
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Step 4: Download dependencies
+# Make mvnw executable (fix for permission denied)
+RUN chmod +x mvnw
+
+# Download dependencies (caches them)
 RUN ./mvnw dependency:go-offline
 
-# Step 5: Copy source code
+# Copy the source code
 COPY src src
 
-# Step 6: Build the application JAR
+# Build the application (skip tests for faster build)
 RUN ./mvnw clean package -DskipTests
 
-# Step 7: Use a smaller JDK image for runtime
-FROM eclipse-temurin:21-jdk AS run
+
+# ===============================
+# Stage 2: Run the application
+# ===============================
+FROM eclipse-temurin:21-jre AS run
+
+# Set working directory
 WORKDIR /app
 
-# Copy only the built JAR
+# Copy the built JAR file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose the port Render will use
+# Expose port (Render will map this automatically)
 EXPOSE 8080
 
-# Start the app
-CMD ["java", "-jar", "app.jar"]
+# Start the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
