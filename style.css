@@ -8,7 +8,9 @@
   --bot: #ecf0f1;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   font-family: Arial, sans-serif;
@@ -19,8 +21,9 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 16px;
- 
+  padding-top: 60px; /* 👈 Push content below fixed navbar */
 }
+
 .navbar {
   background: #2c3e50;
   padding: 10px;
@@ -29,10 +32,9 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-
   gap: 20px;
   justify-content: space-evenly;
-  
+  z-index: 1000;
 }
 
 .navbar a {
@@ -52,7 +54,6 @@ body {
 }
 
 .chat-container {
-
   width: 100%;
   max-width: 480px;
   background: var(--card);
@@ -131,19 +132,19 @@ header {
 
 /* 📱 Mobile Fix */
 @media (max-width: 768px) {
-  nav {
+  .navbar {
     flex-direction: column;   /* stack nav links on mobile */
     gap: 10px;
     padding: 10px;
   }
 
-  #chat-window {
-    height: 60vh;             /* shorter chatbox to fit smaller screens */
+  .chat-window {
+    height: 50vh;             /* shorter chatbox */
     font-size: 14px;
   }
 
-  #input-area {
-    flex-direction: column;   /* input & button stacked */
+  .input-container {
+    flex-direction: column;   /* stack input & button */
   }
 
   #user-input {
