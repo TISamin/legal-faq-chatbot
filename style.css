@@ -1,4 +1,4 @@
-:root {
+/* :root {
   --bg: #f4f6f9;
   --card: #ffffff;
   --accent: #2c3e50;
@@ -96,4 +96,82 @@ header {
 
 #send-btn:hover {
   background: var(--primary-hover);
+} */
+
+/* General Reset */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f4f4f9;
+  color: #333;
+}
+
+/* Navbar */
+.navbar {
+  background: #222;
+  padding: 10px;
+  display: flex;
+  gap: 20px;
+}
+
+.navbar a {
+  color: white;
+  text-decoration: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  transition: background 0.3s;
+}
+
+.navbar a:hover {
+  background: #444;
+}
+
+.navbar a.active {
+  background: #0077cc;
+}
+
+/* Page layout */
+main {
+  padding: 20px;
+}
+
+h1 {
+  margin-bottom: 15px;
+}
+
+/* Chatbox styling */
+#chatbox {
+  border: 1px solid #ccc;
+  padding: 15px;
+  background: #fff;
+  border-radius: 6px;
+  max-width: 600px;
+}
+
+#messages {
+  height: 300px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background: #fafafa;
+}
+
+#user-input {
+  width: 70%;
+  padding: 8px;
+}
+
+#send-btn {
+  padding: 8px 15px;
+  background: #0077cc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#send-btn:hover {
+  background: #005fa3;
 }
