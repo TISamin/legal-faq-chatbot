@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -30,5 +30,274 @@
   </div>
 
   <script src="script.js"></script>
+</body>
+</html>
+ -->
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>⚖️ Legal FAQ Chatbot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Global Styles */
+    :root {
+      --bg: linear-gradient(135deg, #e8f0fe, #f4f6f9);
+      --card: #ffffff;
+      --accent: #2c3e50;
+      --primary: #27ae60;
+      --primary-hover: #219150;
+      --user: #3498db;
+      --bot: #ecf0f1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 80px 16px 40px;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: var(--accent);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .navbar a {
+      color: white;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      transition: background 0.3s;
+      font-weight: 500;
+    }
+    .navbar a:hover {
+      background: rgba(255,255,255,0.15);
+    }
+    .navbar a.active {
+      background: #0077cc;
+    }
+
+    /* Chat Container */
+    .chat-container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h2 {
+      font-size: 18px;
+      margin: 0;
+    }
+    header select {
+      padding: 6px;
+      border-radius: 6px;
+      border: none;
+      font-size: 14px;
+    }
+
+    /* Chat Window */
+    .chat-window {
+      height: 60vh;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fafafa;
+    }
+    .message {
+      padding: 12px 16px;
+      border-radius: 12px;
+      max-width: 80%;
+      word-wrap: break-word;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .user-message {
+      background: var(--user);
+      color: #fff;
+      align-self: flex-end;
+    }
+    .bot-message {
+      background: var(--bot);
+      color: #333;
+      align-self: flex-start;
+      border: 1px solid #ddd;
+    }
+
+    /* Input Box */
+    .input-container {
+      display: flex;
+      gap: 8px;
+      padding: 14px;
+      border-top: 1px solid #e6e6e6;
+      background: #fff;
+    }
+    #user-input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    #send-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    #send-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      body { padding: 100px 12px 40px; }
+      header h2 { font-size: 16px; }
+      #send-btn { padding: 10px 16px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="logo">⚖️ Know Your Rights</a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="instructions.html">Instructions</a>
+    <a href="links.html">Links</a>
+  </div>
+</nav>
+
+<style>
+  .navbar {
+    background: #2c3e50;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .navbar .logo {
+    color: white;
+    font-weight: 600;
+    font-size: 18px;
+    text-decoration: none;
+  }
+  .nav-links {
+    display: flex;
+    gap: 20px;
+    margin: 0 auto; /* keeps links centered */
+  }
+  .nav-links a {
+    color: white;
+    text-decoration: none;
+    padding: 8px 18px;
+    border-radius: 20px;
+    transition: background 0.3s;
+    font-weight: 500;
+  }
+  .nav-links a:hover {
+    background: rgba(255,255,255,0.15);
+  }
+  .nav-links a.active {
+    background: #0077cc;
+  }
+</style>
+
+<script>
+  // Highlight active link automatically
+  const links = document.querySelectorAll('.nav-links a');
+  links.forEach(link => {
+    if (link.href === window.location.href) {
+      link.classList.add('active');
+    }
+  });
+</script>
+
+
+  <div class="chat-container">
+    <header>
+      <h2>⚖️ Legal FAQ Chatbot</h2>
+      <select id="language">
+        <option value="EN">English</option>
+        <option value="BN">বাংলা</option>
+      </select>
+    </header>
+
+    <div id="chat-window" class="chat-window" aria-live="polite">
+      <!-- Messages will appear here -->
+    </div>
+
+    <div class="input-container">
+      <input type="text" id="user-input" placeholder="Type your legal question..." aria-label="Your question">
+      <button id="send-btn" aria-label="Send message">Send</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+  // Typing effect for welcome message
+  document.addEventListener("DOMContentLoaded", () => {
+    const chatWindow = document.getElementById("chat-window");
+    const welcome = document.createElement("div");
+    welcome.className = "message bot-message";
+    chatWindow.appendChild(welcome);
+
+    const text = "👋 Welcome! I’m here to help with your legal questions in Bangladesh. You can ask me about FIR, GD, NID, passports, trade licenses, marriage registration, and more. What would you like to know today?";
+    let i = 0;
+
+    function typeWriter() {
+      if (i < text.length) {
+        welcome.textContent += text.charAt(i);
+        i++;
+        setTimeout(typeWriter, 30); // typing speed
+      }
+    }
+    typeWriter();
+  });
+</script>
+
 </body>
 </html>
