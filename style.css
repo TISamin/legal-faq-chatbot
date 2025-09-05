@@ -130,30 +130,17 @@ header {
   background: var(--primary-hover);
 }
 
-/* 📱 Mobile Fix */
+/* 📱 Keep layout same on mobile (no stacking) */
 @media (max-width: 768px) {
   .navbar {
-    flex-direction: column;   /* stack nav links on mobile */
-    gap: 10px;
-    padding: 10px;
+    flex-wrap: wrap; /* allow nav links to shrink nicely */
+  }
+
+  .chat-container {
+    width: 95%; /* use more screen width on mobile */
   }
 
   .chat-window {
-    height: 50vh;             /* shorter chatbox */
     font-size: 14px;
-  }
-
-  .input-container {
-    flex-direction: column;   /* stack input & button */
-  }
-
-  #user-input {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-
-  #send-btn {
-    width: 100%;              /* big easy-to-tap button */
-    margin-left: 0;
   }
 }
