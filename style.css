@@ -128,3 +128,31 @@ header {
 #send-btn:hover {
   background: var(--primary-hover);
 }
+
+/* 📱 Mobile Fix */
+@media (max-width: 768px) {
+  nav {
+    flex-direction: column;   /* stack nav links on mobile */
+    gap: 10px;
+    padding: 10px;
+  }
+
+  #chat-window {
+    height: 60vh;             /* shorter chatbox to fit smaller screens */
+    font-size: 14px;
+  }
+
+  #input-area {
+    flex-direction: column;   /* input & button stacked */
+  }
+
+  #user-input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  #send-btn {
+    width: 100%;              /* big easy-to-tap button */
+    margin-left: 0;
+  }
+}
