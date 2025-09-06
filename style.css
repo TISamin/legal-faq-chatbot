@@ -21,7 +21,7 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 16px;
-  padding-top: 60px; /* 👈 Push content below fixed navbar */
+  padding-top: 140px; /* 👈 Push content below fixed navbar */
 }
 
 .navbar {
@@ -130,17 +130,32 @@ header {
   background: var(--primary-hover);
 }
 
-/* 📱 Keep layout same on mobile (no stacking) */
+/* 📱 Mobile Fix */
 @media (max-width: 768px) {
   .navbar {
-    flex-wrap: wrap; /* allow nav links to shrink nicely */
-  }
-
-  .chat-container {
-    width: 95%; /* use more screen width on mobile */
+    flex-direction: column;   /* stack nav links on mobile */
+    gap: 10px;
+    padding: 10px;
+    overflow-x: auto;   /* allow horizontal scroll if too many links */
+  white-space: nowrap; /* keep all items in a single line */
   }
 
   .chat-window {
+    height: 50vh;             /* shorter chatbox */
     font-size: 14px;
+  }
+
+  .input-container {
+    flex-direction: column;   /* stack input & button */
+  }
+
+  #user-input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  #send-btn {
+    width: 100%;              /* big easy-to-tap button */
+    margin-left: 0;
   }
 }
