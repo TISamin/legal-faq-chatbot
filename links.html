@@ -121,7 +121,18 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
      overflow-x: auto;
      white-space: nowrap;
+    position:relative;
   }
+  .navbar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 40px;
+  background: linear-gradient(to right, transparent, #2c3e50);
+  pointer-events: none; /* don’t block clicks */
+}
   .navbar .logo {
     color: white;
     font-weight: 600;
@@ -199,3 +210,4 @@
   </main>
 </body>
 </html>
+
