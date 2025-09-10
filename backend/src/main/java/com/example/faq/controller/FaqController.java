@@ -23,7 +23,7 @@ public class FaqController {
         return faqService.getAnswer(question, effectiveLang);
     }
 
-    // Secondary alias endpoint also works: /api/faq/ask?question=...&lang=en
+    // Secondary alias endpoint: /api/faq/ask?question=...&lang=EN
     @GetMapping(value = "/ask", produces = MediaType.TEXT_PLAIN_VALUE)
     public String ask(@RequestParam String question,
                       @RequestParam(name = "lang", defaultValue = "EN") String lang) {
