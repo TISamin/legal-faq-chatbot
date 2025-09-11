@@ -189,17 +189,35 @@ public class FaqService {
         return (double) matchCount / words.length;
     }
 
+    // private boolean containsKeywords(String question, String wikiAnswer) {
+    //     if (wikiAnswer == null || wikiAnswer.isBlank()) return false;
+    //     String[] keywords = question.toLowerCase().split("\\s+");
+    //     int matches = 0;
+    //     for (String k : keywords) {
+    //         if (wikiAnswer.toLowerCase().contains(k)) {
+    //             matches++;
+    //         }
+    //     }
+    //     return matches >= 2; // at least 2 keywords found
+    // }
     private boolean containsKeywords(String question, String wikiAnswer) {
-        if (wikiAnswer == null || wikiAnswer.isBlank()) return false;
-        String[] keywords = question.toLowerCase().split("\\s+");
-        int matches = 0;
-        for (String k : keywords) {
-            if (wikiAnswer.toLowerCase().contains(k)) {
-                matches++;
-            }
-        }
-        return matches >= 2; // at least 2 keywords found
+    if (wikiAnswer == null || wikiAnswer.isBlank()) return false;
+
+    String qLower = question.toLowerCase();
+    String answerLower = wikiAnswer.toLowerCase();
+
+    // 1. Full phrase check first (works well for short terms like "pro bono")
+    if (answerLower.contains(qLower)) return true;
+
+    // 2. Fallback: individual words (for longer questions)
+    String[] keywords = qLower.split("\\s+");
+    int matches = 0;
+    for (String k : keywords) {
+        if (answerLower.contains(k)) matches++;
     }
+    return matches >= 2; // threshold for long questions
+}
+
 
     private String searchWikipedia(String question, String language) {
         try {
