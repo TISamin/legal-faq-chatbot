@@ -43,7 +43,6 @@
 //     List<Faq> searchByQuestion(@Param("question") String question,
 //                                @Param("language") String language);
 // }
-
 package com.example.faq.repository;
 
 import com.example.faq.model.Faq;
@@ -55,10 +54,12 @@ import java.util.List;
 
 public interface FaqRepository extends JpaRepository<Faq, Long> {
 
-    /**
-     * Uses FULLTEXT search on (question, answer) while filtering by language.
-     * MySQL will automatically choose the right FULLTEXT index.
-     */
+    // ✅ Exact match first
+    @Query(value = "SELECT * FROM faq WHERE question = :question AND language = :language LIMIT 1", nativeQuery = true)
+    List<Faq> findByQuestionAndLanguage(@Param("question") String question,
+                                        @Param("language") String language);
+
+    // ✅ Fulltext search fallback
     @Query(value = "SELECT * FROM faq " +
                    "WHERE language = :language " +
                    "AND MATCH(question, answer) AGAINST (:question IN NATURAL LANGUAGE MODE) " +
@@ -67,5 +68,3 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
     List<Faq> searchByKeyword(@Param("question") String question,
                               @Param("language") String language);
 }
-
-
