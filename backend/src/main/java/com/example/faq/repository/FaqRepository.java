@@ -55,11 +55,14 @@ import java.util.List;
 
 public interface FaqRepository extends JpaRepository<Faq, Long> {
 
-    // Use MySQL FULLTEXT search if available
+    /**
+     * Uses FULLTEXT search on (question, answer) while filtering by language.
+     * MySQL will automatically choose the right FULLTEXT index.
+     */
     @Query(value = "SELECT * FROM faq " +
                    "WHERE language = :language " +
                    "AND MATCH(question, answer) AGAINST (:question IN NATURAL LANGUAGE MODE) " +
-                   "LIMIT 5", 
+                   "LIMIT 5",
            nativeQuery = true)
     List<Faq> searchByKeyword(@Param("question") String question,
                               @Param("language") String language);
