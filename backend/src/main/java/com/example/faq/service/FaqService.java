@@ -120,7 +120,6 @@
 //         public String extract;
 //     }
 // }
-
 package com.example.faq.service;
 
 import com.example.faq.model.Faq;
@@ -235,3 +234,7 @@ public class FaqService {
         return null;
     }
 }
+
+
+
+
