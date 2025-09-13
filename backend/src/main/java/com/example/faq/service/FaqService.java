@@ -120,6 +120,7 @@
 //         public String extract;
 //     }
 // }
+
 package com.example.faq.service;
 
 import com.example.faq.model.Faq;
@@ -145,26 +146,32 @@ public class FaqService {
     public String getAnswer(String question, String languageOrLang) {
         String lang = normalizeLang(languageOrLang);
 
-        // 1. Try DB
+        // 1. Try exact DB match
+        List<Faq> exactMatch = faqRepository.findByQuestionAndLanguage(question.trim(), lang);
+        if (!exactMatch.isEmpty()) {
+            return exactMatch.get(0).getAnswer();
+        }
+
+        // 2. Try FULLTEXT DB search
         List<Faq> faqs = faqRepository.searchByKeyword(question, lang);
         String dbAnswer = faqs.isEmpty() ? null : faqs.get(0).getAnswer();
         double dbScore = calculateDbScore(question, faqs);
 
-        // 2. Try Wikipedia
-        String wikiAnswer = searchWikipedia(question, lang);
-        boolean wikiRelevant = containsKeywords(question, wikiAnswer);
-
-        // 3. Decide which to return
         if (dbAnswer != null && dbScore >= 0.7) {
             return dbAnswer;
-        } else if (wikiRelevant && wikiAnswer != null) {
+        }
+
+        // 3. Try Wikipedia
+        String wikiAnswer = searchWikipedia(question, lang);
+        if (wikiAnswer != null && !wikiAnswer.isBlank()) {
             return wikiAnswer;
+        }
+
+        // 4. Nothing found
+        if (lang.equals("BN")) {
+            return "দুঃখিত, আমি এটির নির্দিষ্ট উত্তর খুঁজে পাইনি। অনুগ্রহ করে প্রশ্নটি ইংরেজিতে করে দেখুন।";
         } else {
-            if (lang.equals("BN")) {
-                return "দুঃখিত, আমি এটির নির্দিষ্ট উত্তর খুঁজে পাইনি। অনুগ্রহ করে প্রশ্নটি ইংরেজিতে করে দেখুন।";
-            } else {
-                return "Sorry, I couldn’t find an exact answer. Please try rephrasing your question in English.";
-            }
+            return "Sorry, I couldn’t find an exact answer. Please try rephrasing your question in English.";
         }
     }
 
@@ -189,48 +196,22 @@ public class FaqService {
         return (double) matchCount / words.length;
     }
 
-    // private boolean containsKeywords(String question, String wikiAnswer) {
-    //     if (wikiAnswer == null || wikiAnswer.isBlank()) return false;
-    //     String[] keywords = question.toLowerCase().split("\\s+");
-    //     int matches = 0;
-    //     for (String k : keywords) {
-    //         if (wikiAnswer.toLowerCase().contains(k)) {
-    //             matches++;
-    //         }
-    //     }
-    //     return matches >= 2; // at least 2 keywords found
-    // }
-    private boolean containsKeywords(String question, String wikiAnswer) {
-    if (wikiAnswer == null || wikiAnswer.isBlank()) return false;
-
-    String qLower = question.toLowerCase();
-    String answerLower = wikiAnswer.toLowerCase();
-
-    // 1. Full phrase check first (works well for short terms like "pro bono")
-    if (answerLower.contains(qLower)) return true;
-
-    // 2. Fallback: individual words (for longer questions)
-    String[] keywords = qLower.split("\\s+");
-    int matches = 0;
-    for (String k : keywords) {
-        if (answerLower.contains(k)) matches++;
-    }
-    return matches >= 2; // threshold for long questions
-}
-
-
+    // --- Wikipedia Search ---
     private String searchWikipedia(String question, String language) {
         try {
             String langCode = language.equals("BN") ? "bn" : "en";
             String encoded = URLEncoder.encode(question, StandardCharsets.UTF_8);
-            String urlStr = "https://" + langCode + ".wikipedia.org/w/api.php?action=query&list=search&srsearch="
-                    + encoded + "&format=json&utf8=&srlimit=1";
+            String urlStr = "https://" + langCode +
+                    ".wikipedia.org/w/api.php?action=query&prop=extracts&exintro=true&explaintext=true&titles="
+                    + encoded + "&format=json&utf8=";
 
             URL url = new URL(urlStr);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestProperty("User-Agent", "LegalFAQBot/1.0 (https://example.com)");
 
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+            try (BufferedReader br = new BufferedReader(
+                    new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+
                 StringBuilder response = new StringBuilder();
                 String line;
                 while ((line = br.readLine()) != null) {
@@ -238,13 +219,13 @@ public class FaqService {
                 }
 
                 String result = response.toString();
-                int snippetIndex = result.indexOf("\"snippet\":\"");
-                if (snippetIndex != -1) {
-                    int start = snippetIndex + 11;
+                int idx = result.indexOf("\"extract\":\"");
+                if (idx != -1) {
+                    int start = idx + 11;
                     int end = result.indexOf("\"", start);
                     if (end > start) {
                         String snippet = result.substring(start, end);
-                        return snippet.replaceAll("<[^>]+>", ""); // remove HTML tags
+                        return snippet.replaceAll("\\\\n", " ").trim();
                     }
                 }
             }
