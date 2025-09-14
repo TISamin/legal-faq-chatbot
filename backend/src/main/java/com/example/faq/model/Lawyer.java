@@ -54,13 +54,13 @@
 
 //     public void setReviews(List<Review> reviews) { this.reviews = reviews; }
 // }
-
 package com.example.faq.model;
 
 import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
+@Table(name = "lawyers") // explicitly map to the existing lawyers table
 public class Lawyer {
 
     @Id
@@ -75,18 +75,22 @@ public class Lawyer {
     @Column(name = "photo_url")
     private String photoUrl;
 
+    @Column(name = "cases_handled")
+    private Integer casesHandled;
+
     @OneToMany(mappedBy = "lawyer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Review> reviews;
 
     // Constructors
     public Lawyer() {}
 
-    public Lawyer(String name, String specialization, String email, String phone, String photoUrl) {
+    public Lawyer(String name, String specialization, String email, String phone, String photoUrl, Integer casesHandled) {
         this.name = name;
         this.specialization = specialization;
         this.email = email;
         this.phone = phone;
         this.photoUrl = photoUrl;
+        this.casesHandled = casesHandled;
     }
 
     // Getters and Setters
@@ -108,6 +112,10 @@ public class Lawyer {
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
 
+    public Integer getCasesHandled() { return casesHandled; }
+    public void setCasesHandled(Integer casesHandled) { this.casesHandled = casesHandled; }
+
     public List<Review> getReviews() { return reviews; }
     public void setReviews(List<Review> reviews) { this.reviews = reviews; }
 }
+
