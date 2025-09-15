@@ -729,7 +729,8 @@
                     <i data-feather="${sender === 'user' ? 'user' : 'message-square'}" class="${sender === 'user' ? 'text-blue-600' : 'text-white'}"></i>
                 </div>
                 <div class="${sender === 'user' ? 'bg-white' : 'bg-blue-600 text-white'} p-4 rounded-lg shadow max-w-xs md:max-w-md">
-                    <p>${message}</p>
+                    <p>${message.replace(/\n/g, '<br>')}</p>
+
                 </div>
             `;
             chatContainer.appendChild(div);
