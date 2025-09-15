@@ -955,4 +955,27 @@ public class FaqService {
     return "(no extra info available)";
 }
 
+    // add inside FaqService class (bottom is fine)
+
+private String nullablePreview(String input) {
+    if (input == null) return "(null)";
+    int len = Math.min(120, input.length());
+    return input.substring(0, len).replaceAll("\\s+", " ") + (input.length() > 120 ? "..." : "");
+}
+
+private String extractFirstMatch(String input, String[] patterns) {
+    if (input == null) return null;
+    for (String p : patterns) {
+        int idx = input.indexOf(p);
+        if (idx != -1) {
+            String cut = input.substring(idx + p.length());
+            int end = cut.indexOf("\"");
+            if (end != -1) return cut.substring(0, end);
+            return cut; // fallback if no quote
+        }
+    }
+    return null;
+}
+
+
 }
