@@ -1,37 +1,3 @@
-// package com.example.faq.service;
-
-// import com.example.faq.model.Faq;
-// import com.example.faq.repository.FaqRepository;
-// import org.springframework.stereotype.Service;
-
-// import java.util.List;
-
-// @Service
-// public class FaqService {
-//     private final FaqRepository faqRepository;
-
-//     public FaqService(FaqRepository faqRepository) {
-//         this.faqRepository = faqRepository;
-//     }
-
-//     public String getAnswer(String question, String languageOrLang) {
-//         String lang = normalizeLang(languageOrLang);
-//         List<Faq> faqs = faqRepository.findByQuestionContainingIgnoreCaseAndLanguage(question, lang);
-//         if (!faqs.isEmpty()) {
-//             return faqs.get(0).getAnswer();
-//         }
-//         return "Sorry, I don’t have an answer to that yet. Please try another question.";
-//     }
-
-//     private String normalizeLang(String language) {
-//         if (language == null) return "EN";
-//         String l = language.trim().toUpperCase();
-//         if (l.startsWith("B")) return "BN";
-//         return "EN";
-//     }
-// }
-//************************************************************************************
-
 
 
 // package com.example.faq.service;
@@ -39,6 +5,11 @@
 // import com.example.faq.model.Faq;
 // import com.example.faq.repository.FaqRepository;
 // import org.springframework.stereotype.Service;
+
+// import java.net.URI;
+// import java.net.http.HttpClient;
+// import java.net.http.HttpRequest;
+// import java.net.http.HttpResponse;
 
 // import java.text.Normalizer;
 // import java.util.*;
@@ -50,6 +21,7 @@
 // public class FaqService {
 
 //     private final FaqRepository faqRepository;
+//     private final HttpClient httpClient = HttpClient.newHttpClient();
 
 //     public FaqService(FaqRepository faqRepository) {
 //         this.faqRepository = faqRepository;
@@ -72,7 +44,7 @@
 //     private static final double MIN_ACCEPTED_SCORE = 0.0;
 
 //     /**
-//      * Main entry: automatically detects language and returns best DB answer.
+//      * Main entry: automatically detects language and returns best DB answer + note.
 //      */
 //     public String getAnswer(String question) {
 //         if (question == null || question.isBlank()) {
@@ -86,7 +58,9 @@
 //         // 2️⃣ Try exact-match shortcut
 //         try {
 //             Faq exact = faqRepository.findExact(rawQuery, lang);
-//             if (exact != null) return safeAnswer(exact);
+//             if (exact != null) {
+//                 return safeAnswer(exact) + "\n\nNote: " + fetchExtraInfo(rawQuery);
+//             }
 //         } catch (Exception e) {
 //             System.err.println("Exact-match query failed: " + e.getMessage());
 //         }
@@ -103,7 +77,8 @@
 //                 .collect(Collectors.toList());
 
 //         if (userTokens.isEmpty()) userTokens = new ArrayList<>(allQueryTokens);
-//         if (userTokens.isEmpty()) return fallbackMessage(lang);
+//         if (userTokens.isEmpty())
+//             return fallbackMessage(lang) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
 //         // 4️⃣ Fetch candidates
 //         LinkedHashMap<Long, Faq> candidates = new LinkedHashMap<>();
@@ -111,12 +86,15 @@
 //         int lim = Math.min(TOKEN_FETCH_LIMIT, userTokens.size());
 //         for (int i = 0; i < lim; ++i) tryAddCandidates(userTokens.get(i), lang, candidates);
 
-//         if (candidates.isEmpty()) return fallbackMessage(lang);
+//         if (candidates.isEmpty())
+//             return fallbackMessage(lang) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
 //         // 5️⃣ Check normalized exact among candidates
 //         String normalizedQuery = normalizeForCompare(rawQuery);
 //         for (Faq f : candidates.values()) {
-//             if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) return safeAnswer(f);
+//             if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) {
+//                 return safeAnswer(f) + "\n\nNote: " + fetchExtraInfo(rawQuery);
+//             }
 //         }
 
 //         // 6️⃣ Score candidates by token overlap
@@ -147,14 +125,16 @@
 //             }
 //         }
 
-//         if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE) return safeAnswer(bestFaq);
+//         if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE)
+//             return safeAnswer(bestFaq) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
 //         // 7️⃣ Fallback to shortest candidate
 //         Faq fallback = candidates.values().stream()
 //                 .min(Comparator.comparingInt(a -> a.getQuestion() == null ? Integer.MAX_VALUE : a.getQuestion().length()))
 //                 .orElse(null);
 
-//         return fallback != null ? safeAnswer(fallback) : fallbackMessage(lang);
+//         return (fallback != null ? safeAnswer(fallback) : fallbackMessage(lang))
+//                 + "\n\nNote: " + fetchExtraInfo(rawQuery);
 //     }
 
 //     // ---------- helpers ----------
@@ -212,9 +192,67 @@
 //         }
 //         return bnCount > enCount ? "BN" : "EN";
 //     }
+
+//     // --------- NEW: Fetch Wikipedia or HuggingFace ---------
+//     private String fetchExtraInfo(String query) {
+//         try {
+//             // Wikipedia REST API
+//             String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+//                     query.trim().replace(" ", "_");
+//             HttpRequest req = HttpRequest.newBuilder()
+//                     .uri(URI.create(url))
+//                     .header("User-Agent", "LegalFAQBot/1.0")
+//                     .GET()
+//                     .build();
+
+//             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+//             if (resp.statusCode() == 200 && resp.body().contains("\"extract\"")) {
+//                 String body = resp.body();
+//                 int idx = body.indexOf("\"extract\":\"");
+//                 if (idx != -1) {
+//                     String extract = body.substring(idx + 11);
+//                     extract = extract.split("\",\"")[0];
+//                     return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"");
+//                 }
+//             }
+//         } catch (Exception e) {
+//             System.err.println("Wiki fetch failed: " + e.getMessage());
+//         }
+
+//         // HuggingFace fallback
+//         try {
+//             String apiKey = System.getenv("HUGGINGFACE_API_KEY");
+//             if (apiKey == null || apiKey.isBlank()) return "(no extra info available)";
+
+//             String payload = "{ \"inputs\": \"" + query.replace("\"", "'") + "\", " +
+//                     "\"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+
+//             HttpRequest req = HttpRequest.newBuilder()
+//                     .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
+//                     .header("Authorization", "Bearer " + apiKey)
+//                     .header("Content-Type", "application/json")
+//                     .POST(HttpRequest.BodyPublishers.ofString(payload))
+//                     .build();
+
+//             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+//             if (resp.statusCode() == 200) {
+//                 String body = resp.body();
+//                 int start = body.indexOf("generated_text");
+//                 if (start != -1) {
+//                     String cut = body.substring(start + 17);
+//                     String out = cut.split("\"")[0];
+//                     return out.trim();
+//                 }
+//             }
+//         } catch (Exception e) {
+//             System.err.println("HF fetch failed: " + e.getMessage());
+//         }
+
+//         return "(no extra info available)";
+//     }
 // }
 
-//**************************************************************************************
+//***************************************************************************************************
 
 package com.example.faq.service;
 
@@ -410,63 +448,93 @@ public class FaqService {
     }
 
     // --------- NEW: Fetch Wikipedia or HuggingFace ---------
+
     private String fetchExtraInfo(String query) {
-        try {
-            // Wikipedia REST API
-            String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
-                    query.trim().replace(" ", "_");
-            HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "LegalFAQBot/1.0")
-                    .GET()
-                    .build();
+    // 1. Wikipedia check (same as before)
+    try {
+        String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+                query.trim().replace(" ", "_");
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "LegalFAQBot/1.0")
+                .GET()
+                .build();
 
-            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200 && resp.body().contains("\"extract\"")) {
-                String body = resp.body();
-                int idx = body.indexOf("\"extract\":\"");
-                if (idx != -1) {
-                    String extract = body.substring(idx + 11);
-                    extract = extract.split("\",\"")[0];
-                    return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"");
-                }
+        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() == 200 && resp.body().contains("\"extract\"")) {
+            String body = resp.body();
+            int idx = body.indexOf("\"extract\":\"");
+            if (idx != -1) {
+                String extract = body.substring(idx + 11);
+                extract = extract.split("\",\"")[0];
+                return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"");
             }
-        } catch (Exception e) {
-            System.err.println("Wiki fetch failed: " + e.getMessage());
         }
+    } catch (Exception e) {
+        System.err.println("Wiki fetch failed: " + e.getMessage());
+    }
 
-        // HuggingFace fallback
-        try {
-            String apiKey = System.getenv("HUGGINGFACE_API_KEY");
-            if (apiKey == null || apiKey.isBlank()) return "(no extra info available)";
-
-            String payload = "{ \"inputs\": \"" + query.replace("\"", "'") + "\", " +
-                    "\"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+    // 2. Gemini LLM attempt
+    try {
+        String apiKey = System.getenv("GEMINI_API_KEY");
+        if (apiKey != null && !apiKey.isBlank()) {
+            String payload = "{ \"contents\": [{ \"parts\": [{ \"text\": \"" +
+                    query.replace("\"", "'") + "\" }] }], " +
+                    "\"generationConfig\": { \"temperature\": 0.85, \"maxOutputTokens\": 120 } }";
 
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
-                    .header("Authorization", "Bearer " + apiKey)
+                    .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build();
 
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
-            if (resp.statusCode() == 200) {
+            if (resp.statusCode() == 200 && resp.body().contains("\"text\"")) {
                 String body = resp.body();
-                int start = body.indexOf("generated_text");
-                if (start != -1) {
-                    String cut = body.substring(start + 17);
-                    String out = cut.split("\"")[0];
+                int idx = body.indexOf("\"text\":");
+                if (idx != -1) {
+                    String cut = body.substring(idx + 8);
+                    String out = cut.split("\"")[1];
                     return out.trim();
                 }
             }
-        } catch (Exception e) {
-            System.err.println("HF fetch failed: " + e.getMessage());
         }
-
-        return "(no extra info available)";
+    } catch (Exception e) {
+        System.err.println("Gemini fetch failed: " + e.getMessage());
     }
+
+    // 3. HuggingFace fallback (Mistral)
+    try {
+        String apiKey = System.getenv("HUGGINGFACE_API_KEY");
+        if (apiKey == null || apiKey.isBlank()) return "(no extra info available)";
+
+        String payload = "{ \"inputs\": \"" + query.replace("\"", "'") + "\", " +
+                "\"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+
+        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() == 200) {
+            String body = resp.body();
+            int start = body.indexOf("generated_text");
+            if (start != -1) {
+                String cut = body.substring(start + 17);
+                String out = cut.split("\"")[0];
+                return out.trim();
+            }
+        }
+    } catch (Exception e) {
+        System.err.println("HF fetch failed: " + e.getMessage());
+    }
+
+    // 4. Fallback if all fail
+    return "(no extra info available)";
+    }
+
 }
-
-
 
