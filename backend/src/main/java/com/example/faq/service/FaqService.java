@@ -732,172 +732,262 @@ public class FaqService {
     }
 
     // --------- NEW: Fetch Wikipedia -> Gemini -> HuggingFace (Mistral) ---------
+    // private String fetchExtraInfo(String query) {
+    //     if (query == null || query.isBlank()) return "(no extra info available)";
+
+    //     // 1) Try Wikipedia summary (first)
+    //     try {
+    //         String wikiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+    //                 query.trim().replace(" ", "_");
+    //         HttpRequest wikiReq = HttpRequest.newBuilder()
+    //                 .uri(URI.create(wikiUrl))
+    //                 .header("User-Agent", "LegalFAQBot/1.0")
+    //                 .GET()
+    //                 .build();
+
+    //         HttpResponse<String> wikiResp = httpClient.send(wikiReq, HttpResponse.BodyHandlers.ofString());
+    //         if (wikiResp.statusCode() == 200 && wikiResp.body() != null && wikiResp.body().contains("\"extract\"")) {
+    //             String body = wikiResp.body();
+    //             int idx = body.indexOf("\"extract\":\"");
+    //             if (idx != -1) {
+    //                 String extract = body.substring(idx + 11);
+    //                 // cut at the next '","' or closing quote
+    //                 if (extract.contains("\",\"")) extract = extract.split("\",\"")[0];
+    //                 else if (extract.contains("\"")) extract = extract.split("\"")[0];
+    //                 return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
+    //             }
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("Wiki fetch failed: " + e.getMessage());
+    //     }
+
+    //     // 2) Try Gemini (if configured)
+    //     try {
+    //         String gemKey = System.getenv("GEMINI_API_KEY");
+    //         if (gemKey != null && !gemKey.isBlank()) {
+    //             // Build request body (Generative Language API - generateContent)
+    //             String safeQ = query.replace("\"", "\\\"").replace("\n", " ");
+    //             String gemBody = "{"
+    //                     + "\"contents\":[{\"parts\":[{\"text\":\"" + safeQ + "\"}]}],"
+    //                     + "\"generationConfig\":{"
+    //                     + "\"temperature\":0.85,"
+    //                     + "\"maxOutputTokens\":120"
+    //                     + "}"
+    //                     + "}";
+
+    //             String gemUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + gemKey;
+    //             HttpRequest gemReq = HttpRequest.newBuilder()
+    //                     .uri(URI.create(gemUrl))
+    //                     .header("Content-Type", "application/json")
+    //                     .POST(HttpRequest.BodyPublishers.ofString(gemBody))
+    //                     .build();
+
+    //             HttpResponse<String> gemResp = httpClient.send(gemReq, HttpResponse.BodyHandlers.ofString());
+    //             if (gemResp.statusCode() == 200 && gemResp.body() != null) {
+    //                 String body = gemResp.body();
+
+    //                 // heuristic parsing: look for common fields containing the generated text
+    //                 String candidate = extractFirstMatch(body,
+    //                         new String[] {
+    //                                 "\"text\":\"",              // generic
+    //                                 "\"outputText\":\"",        // some older variants
+    //                                 "\"content\":\"",          // fallback
+    //                                 "\"candidates\":[",        // nested candidates
+    //                                 "\"response\":\""          // possible field
+    //                         });
+    //                 if (candidate != null && !candidate.isBlank()) {
+    //                     // strip escaped newlines/quotes
+    //                     return candidate.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
+    //                 }
+    //                 // Another attempt: search for "output" blocks with "text"
+    //                 // This is tolerant — small chance of not matching, but covers many variations
+    //                 int pos = body.indexOf("\"content\":[");
+    //                 if (pos != -1) {
+    //                     String sub = body.substring(pos);
+    //                     String txt = extractFirstMatch(sub, new String[] { "\"text\":\"", "\"output_text\":\"", "\"generated_text\":\"" });
+    //                     if (txt != null && !txt.isBlank()) return txt.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
+    //                 }
+    //             } else {
+    //                 System.err.println("Gemini returned status " + gemResp.statusCode() + " body: " + nullablePreview(gemResp.body()));
+    //             }
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("Gemini fetch failed: " + e.getMessage());
+    //     }
+
+    //     // 3) HuggingFace Mistral fallback (if configured)
+    //     try {
+    //         String hfKey = System.getenv("HUGGINGFACE_API_KEY");
+    //         if (hfKey == null || hfKey.isBlank()) return "(no extra info available)";
+
+    //         String safeQ = query.replace("\"", "\\\"").replace("\n", " ");
+    //         String hfPayload = "{ \"inputs\": \"" + safeQ + "\", \"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+
+    //         HttpRequest hfReq = HttpRequest.newBuilder()
+    //                 .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
+    //                 .header("Authorization", "Bearer " + hfKey)
+    //                 .header("Content-Type", "application/json")
+    //                 .POST(HttpRequest.BodyPublishers.ofString(hfPayload))
+    //                 .build();
+
+    //         HttpResponse<String> hfResp = httpClient.send(hfReq, HttpResponse.BodyHandlers.ofString());
+    //         if (hfResp.statusCode() == 200 && hfResp.body() != null) {
+    //             String body = hfResp.body();
+
+    //             // HuggingFace often returns a JSON array with objects containing "generated_text"
+    //             String gen = extractFirstMatch(body, new String[] { "\"generated_text\":\"", "\"generated_text\": \"" , "\"text\":\"", "\"answer\":\"" });
+    //             if (gen != null && !gen.isBlank()) {
+    //                 return gen.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
+    //             }
+
+    //             // If the response is a plain string (some HF endpoints), return it
+    //             String trimmed = body.trim();
+    //             if (trimmed.length() > 0 && !trimmed.contains("error")) {
+    //                 // try to strip surrounding JSON array brackets and quotes if present
+    //                 if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    //                     // quick attempt to extract inner text
+    //                     int idx = trimmed.indexOf("\"generated_text\":\"");
+    //                     if (idx != -1) {
+    //                         String g = trimmed.substring(idx + 17);
+    //                         int end = g.indexOf("\"");
+    //                         if (end != -1) return g.substring(0, end).replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
+    //                     }
+    //                 }
+    //                 // otherwise return trimmed (may be a simple string)
+    //                 return trimmed;
+    //             }
+    //         } else {
+    //             System.err.println("HuggingFace returned status " + hfResp.statusCode() + " body: " + nullablePreview(hfResp.body()));
+    //         }
+    //     } catch (Exception e) {
+    //         System.err.println("HF fetch failed: " + e.getMessage());
+    //     }
+
+    //     // 4) all failed
+    //     return "(no extra info available)";
+    // }
+
+    // // Helper: try multiple substring patterns and return the first found token text
+    // private String extractFirstMatch(String body, String[] patterns) {
+    //     if (body == null) return null;
+    //     for (String p : patterns) {
+    //         int idx = body.indexOf(p);
+    //         if (idx != -1) {
+    //             int start = idx + p.length();
+    //             // find closing quote
+    //             int end = body.indexOf("\"", start);
+    //             if (end != -1 && end > start) {
+    //                 String candidate = body.substring(start, end);
+    //                 if (candidate != null && !candidate.isBlank()) {
+    //                     return candidate;
+    //                 }
+    //             } else {
+    //                 // if no closing quote, try to extract until next brace or comma
+    //                 int end2 = body.indexOf(",", start);
+    //                 if (end2 == -1) end2 = body.indexOf("}", start);
+    //                 if (end2 != -1 && end2 > start) {
+    //                     String candidate = body.substring(start, end2).trim();
+    //                     if (!candidate.isBlank()) return candidate;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return null;
+    // }
+
+    // private String nullablePreview(String s) {
+    //     if (s == null) return "";
+    //     return s.length() > 200 ? s.substring(0, 200) + "..." : s;
+    // }
+
     private String fetchExtraInfo(String query) {
-        if (query == null || query.isBlank()) return "(no extra info available)";
+    // 1. Try Wikipedia first
+    try {
+        String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+                query.trim().replace(" ", "_");
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("User-Agent", "LegalFAQBot/1.0")
+                .GET()
+                .build();
 
-        // 1) Try Wikipedia summary (first)
-        try {
-            String wikiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
-                    query.trim().replace(" ", "_");
-            HttpRequest wikiReq = HttpRequest.newBuilder()
-                    .uri(URI.create(wikiUrl))
-                    .header("User-Agent", "LegalFAQBot/1.0")
-                    .GET()
-                    .build();
-
-            HttpResponse<String> wikiResp = httpClient.send(wikiReq, HttpResponse.BodyHandlers.ofString());
-            if (wikiResp.statusCode() == 200 && wikiResp.body() != null && wikiResp.body().contains("\"extract\"")) {
-                String body = wikiResp.body();
-                int idx = body.indexOf("\"extract\":\"");
-                if (idx != -1) {
-                    String extract = body.substring(idx + 11);
-                    // cut at the next '","' or closing quote
-                    if (extract.contains("\",\"")) extract = extract.split("\",\"")[0];
-                    else if (extract.contains("\"")) extract = extract.split("\"")[0];
-                    return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
-                }
+        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() == 200 && resp.body().contains("\"extract\"")) {
+            String body = resp.body();
+            int idx = body.indexOf("\"extract\":\"");
+            if (idx != -1) {
+                String extract = body.substring(idx + 11);
+                extract = extract.split("\",\"")[0];
+                return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"");
             }
-        } catch (Exception e) {
-            System.err.println("Wiki fetch failed: " + e.getMessage());
         }
+    } catch (Exception e) {
+        System.err.println("Wiki fetch failed: " + e.getMessage());
+    }
 
-        // 2) Try Gemini (if configured)
-        try {
-            String gemKey = System.getenv("GEMINI_API_KEY");
-            if (gemKey != null && !gemKey.isBlank()) {
-                // Build request body (Generative Language API - generateContent)
-                String safeQ = query.replace("\"", "\\\"").replace("\n", " ");
-                String gemBody = "{"
-                        + "\"contents\":[{\"parts\":[{\"text\":\"" + safeQ + "\"}]}],"
-                        + "\"generationConfig\":{"
-                        + "\"temperature\":0.85,"
-                        + "\"maxOutputTokens\":120"
-                        + "}"
-                        + "}";
+    // 2. Try Gemini
+    try {
+        String apiKey = System.getenv("GEMINI_API_KEY");
+        if (apiKey != null && !apiKey.isBlank()) {
+            String payload = "{ \"contents\": [{ \"parts\":[{\"text\":\"" +
+                    query.replace("\"", "'") + "\"}]}]}";
 
-                String gemUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + gemKey;
-                HttpRequest gemReq = HttpRequest.newBuilder()
-                        .uri(URI.create(gemUrl))
-                        .header("Content-Type", "application/json")
-                        .POST(HttpRequest.BodyPublishers.ofString(gemBody))
-                        .build();
-
-                HttpResponse<String> gemResp = httpClient.send(gemReq, HttpResponse.BodyHandlers.ofString());
-                if (gemResp.statusCode() == 200 && gemResp.body() != null) {
-                    String body = gemResp.body();
-
-                    // heuristic parsing: look for common fields containing the generated text
-                    String candidate = extractFirstMatch(body,
-                            new String[] {
-                                    "\"text\":\"",              // generic
-                                    "\"outputText\":\"",        // some older variants
-                                    "\"content\":\"",          // fallback
-                                    "\"candidates\":[",        // nested candidates
-                                    "\"response\":\""          // possible field
-                            });
-                    if (candidate != null && !candidate.isBlank()) {
-                        // strip escaped newlines/quotes
-                        return candidate.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
-                    }
-                    // Another attempt: search for "output" blocks with "text"
-                    // This is tolerant — small chance of not matching, but covers many variations
-                    int pos = body.indexOf("\"content\":[");
-                    if (pos != -1) {
-                        String sub = body.substring(pos);
-                        String txt = extractFirstMatch(sub, new String[] { "\"text\":\"", "\"output_text\":\"", "\"generated_text\":\"" });
-                        if (txt != null && !txt.isBlank()) return txt.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
-                    }
-                } else {
-                    System.err.println("Gemini returned status " + gemResp.statusCode() + " body: " + nullablePreview(gemResp.body()));
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Gemini fetch failed: " + e.getMessage());
-        }
-
-        // 3) HuggingFace Mistral fallback (if configured)
-        try {
-            String hfKey = System.getenv("HUGGINGFACE_API_KEY");
-            if (hfKey == null || hfKey.isBlank()) return "(no extra info available)";
-
-            String safeQ = query.replace("\"", "\\\"").replace("\n", " ");
-            String hfPayload = "{ \"inputs\": \"" + safeQ + "\", \"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
-
-            HttpRequest hfReq = HttpRequest.newBuilder()
-                    .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
-                    .header("Authorization", "Bearer " + hfKey)
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(hfPayload))
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build();
 
-            HttpResponse<String> hfResp = httpClient.send(hfReq, HttpResponse.BodyHandlers.ofString());
-            if (hfResp.statusCode() == 200 && hfResp.body() != null) {
-                String body = hfResp.body();
-
-                // HuggingFace often returns a JSON array with objects containing "generated_text"
-                String gen = extractFirstMatch(body, new String[] { "\"generated_text\":\"", "\"generated_text\": \"" , "\"text\":\"", "\"answer\":\"" });
-                if (gen != null && !gen.isBlank()) {
-                    return gen.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
-                }
-
-                // If the response is a plain string (some HF endpoints), return it
-                String trimmed = body.trim();
-                if (trimmed.length() > 0 && !trimmed.contains("error")) {
-                    // try to strip surrounding JSON array brackets and quotes if present
-                    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                        // quick attempt to extract inner text
-                        int idx = trimmed.indexOf("\"generated_text\":\"");
-                        if (idx != -1) {
-                            String g = trimmed.substring(idx + 17);
-                            int end = g.indexOf("\"");
-                            if (end != -1) return g.substring(0, end).replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"").trim();
-                        }
-                    }
-                    // otherwise return trimmed (may be a simple string)
-                    return trimmed;
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body().contains("text")) {
+                String body = resp.body();
+                int idx = body.indexOf("\"text\":\"");
+                if (idx != -1) {
+                    String out = body.substring(idx + 8);
+                    out = out.split("\"")[0];
+                    return out.trim();
                 }
             } else {
-                System.err.println("HuggingFace returned status " + hfResp.statusCode() + " body: " + nullablePreview(hfResp.body()));
-            }
-        } catch (Exception e) {
-            System.err.println("HF fetch failed: " + e.getMessage());
-        }
-
-        // 4) all failed
-        return "(no extra info available)";
-    }
-
-    // Helper: try multiple substring patterns and return the first found token text
-    private String extractFirstMatch(String body, String[] patterns) {
-        if (body == null) return null;
-        for (String p : patterns) {
-            int idx = body.indexOf(p);
-            if (idx != -1) {
-                int start = idx + p.length();
-                // find closing quote
-                int end = body.indexOf("\"", start);
-                if (end != -1 && end > start) {
-                    String candidate = body.substring(start, end);
-                    if (candidate != null && !candidate.isBlank()) {
-                        return candidate;
-                    }
-                } else {
-                    // if no closing quote, try to extract until next brace or comma
-                    int end2 = body.indexOf(",", start);
-                    if (end2 == -1) end2 = body.indexOf("}", start);
-                    if (end2 != -1 && end2 > start) {
-                        String candidate = body.substring(start, end2).trim();
-                        if (!candidate.isBlank()) return candidate;
-                    }
-                }
+                System.err.println("Gemini returned status " + resp.statusCode() + " body: " + resp.body());
             }
         }
-        return null;
+    } catch (Exception e) {
+        System.err.println("Gemini fetch failed: " + e.getMessage());
     }
 
-    private String nullablePreview(String s) {
-        if (s == null) return "";
-        return s.length() > 200 ? s.substring(0, 200) + "..." : s;
+    // 3. HuggingFace fallback → Falcon-7B-Instruct
+    try {
+        String apiKey = System.getenv("HUGGINGFACE_API_KEY");
+        if (apiKey == null || apiKey.isBlank()) return "(no extra info available)";
+
+        String payload = "{ \"inputs\": \"" + query.replace("\"", "'") + "\", " +
+                "\"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create("https://api-inference.huggingface.co/models/tiiuae/falcon-7b-instruct"))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(payload))
+                .build();
+
+        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() == 200) {
+            String body = resp.body();
+            int start = body.indexOf("generated_text");
+            if (start != -1) {
+                String cut = body.substring(start + 17);
+                String out = cut.split("\"")[0];
+                return out.trim();
+            }
+        } else {
+            System.err.println("HuggingFace returned status " + resp.statusCode() + " body: " + resp.body());
+        }
+    } catch (Exception e) {
+        System.err.println("HF fetch failed: " + e.getMessage());
     }
+
+    return "(no extra info available)";
+}
+
 }
 
