@@ -31,96 +31,8 @@
 //     }
 // }
 //************************************************************************************
-// package com.example.faq.service;
 
-// import com.example.faq.model.Faq;
-// import com.example.faq.repository.FaqRepository;
-// import org.springframework.stereotype.Service;
 
-// import java.util.List;
-
-// @Service
-// public class FaqService {
-//     private final FaqRepository faqRepository;
-
-//     public FaqService(FaqRepository faqRepository) {
-//         this.faqRepository = faqRepository;
-//     }
-
-//     public String getAnswer(String question, String languageOrLang) {
-//         String lang = normalizeLang(languageOrLang);
-//         List<Faq> faqs = faqRepository.searchFaq(question, lang); // FULLTEXT search
-//         if (!faqs.isEmpty()) {
-//             return faqs.get(0).getAnswer(); // best match
-//         }
-//         return "Sorry, I don’t have an answer to that yet. Please try another question.";
-//     }
-
-//     private String normalizeLang(String language) {
-//         if (language == null) return "EN";
-//         String l = language.trim().toUpperCase();
-//         if (l.startsWith("B")) return "BN";
-//         return "EN";
-//     }
-// }
-//**************************************************
-
-// package com.example.faq.service;
-
-// import com.example.faq.model.Faq;
-// import com.example.faq.repository.FaqRepository;
-// import org.springframework.stereotype.Service;
-// import org.springframework.web.client.RestTemplate;
-// import org.springframework.web.util.UriUtils;
-
-// import java.nio.charset.StandardCharsets;
-// import java.util.List;
-
-// @Service
-// public class FaqService {
-
-//     private final FaqRepository faqRepository;
-//     private final RestTemplate restTemplate;
-
-//     public FaqService(FaqRepository faqRepository) {
-//         this.faqRepository = faqRepository;
-//         this.restTemplate = new RestTemplate();
-//     }
-
-//     public String getAnswer(String question, String language) {
-//         List<Faq> faqs = faqRepository.searchByQuestion(question, language);
-
-//         if (!faqs.isEmpty()) {
-//             return faqs.get(0).getAnswer();
-//         }
-
-//         // If Bangla question, prompt to try English
-//         if ("BN".equalsIgnoreCase(language)) {
-//             return "এই প্রশ্নটি খুব নির্দিষ্ট বা জটিল। অনুগ্রহ করে ইংরেজিতে লিখে চেষ্টা করুন।";
-//         }
-
-//         // Wikipedia fallback for English
-//         try {
-//             String encodedQuestion = UriUtils.encode(question, StandardCharsets.UTF_8);
-//             String wikiUrl = "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodedQuestion;
-
-//             WikipediaResponse response = restTemplate.getForObject(wikiUrl, WikipediaResponse.class);
-//             if (response != null && response.extract != null && !response.extract.isEmpty()) {
-//                 return response.extract;
-//             }
-//         } catch (Exception e) {
-//             // ignore errors, fallback to polite message
-//         }
-
-//         return "This question is very specific or complex. Please try rephrasing or searching elsewhere.";
-//     }
-
-//     // Inner class to map Wikipedia JSON
-//     private static class WikipediaResponse {
-//         public String extract;
-//     }
-// }
-//******************************************************
 
 // package com.example.faq.service;
 
@@ -143,8 +55,6 @@
 //         this.faqRepository = faqRepository;
 //     }
 
-//     // ---------------- CONFIG ----------------
-//     // Edit these stopword sets if you want to change ignored words.
 //     private static final Set<String> STOPWORDS_EN = Set.of(
 //             "what","is","a","an","the","of","in","on","to","for","and","between",
 //             "how","do","does","did","can","should","will","my","your","its","it's",
@@ -153,45 +63,35 @@
 //     );
 
 //     private static final Set<String> STOPWORDS_BN = Set.of(
-//             // add/remove Bengali stopwords as needed
 //             "কি","কী","কেন","কখন","কোথায়","কোথায়","কিভাবে","কীভাবে",
 //             "এবং","এই","ও","তার","আমি","আপনি","হয়ে","হয়","হবে","থেকে","তে","করে","ছে"
 //     );
 
-//     // How many tokens to use for candidate keyword fetch (first N tokens)
 //     private static final int TOKEN_FETCH_LIMIT = 5;
-
-//     // Regex to extract letter sequences (works for Latin and Indic scripts)
 //     private static final Pattern WORD_PATTERN = Pattern.compile("\\p{L}+");
-
-//     // Minimum accepted overlap (you can increase if you want stricter matches)
-//     private static final double MIN_ACCEPTED_SCORE = 0.0; // 0.0 means accept best even if single token matches
-
-//     // ----------------------------------------
+//     private static final double MIN_ACCEPTED_SCORE = 0.0;
 
 //     /**
-//      * Main entry: returns the best DB answer using Option B (LIKE + percentage overlap).
+//      * Main entry: automatically detects language and returns best DB answer.
 //      */
-//     public String getAnswer(String question, String languageOrLang) {
+//     public String getAnswer(String question) {
 //         if (question == null || question.isBlank()) {
 //             return "⚠️ Please enter a valid question.";
 //         }
 
-//         String lang = normalizeLang(languageOrLang);
+//         // 1️⃣ Auto-detect language
+//         String lang = detectLanguage(question);
 //         String rawQuery = question.trim();
 
-//         // 1) Try a strict exact-match short-circuit (fast)
+//         // 2️⃣ Try exact-match shortcut
 //         try {
 //             Faq exact = faqRepository.findExact(rawQuery, lang);
-//             if (exact != null) {
-//                 return safeAnswer(exact);
-//             }
+//             if (exact != null) return safeAnswer(exact);
 //         } catch (Exception e) {
-//             // ignore and continue to candidate fetch — do not fail the request
 //             System.err.println("Exact-match query failed: " + e.getMessage());
 //         }
 
-//         // 2) Tokenize and remove stopwords
+//         // 3️⃣ Tokenize and remove stopwords
 //         List<String> allQueryTokens = extractWords(rawQuery).stream()
 //                 .map(String::toLowerCase)
 //                 .collect(Collectors.toList());
@@ -202,40 +102,24 @@
 //                 .filter(t -> !stopwords.contains(t))
 //                 .collect(Collectors.toList());
 
-//         // If removing stopwords leaves nothing, use the raw tokens
-//         if (userTokens.isEmpty()) {
-//             userTokens = new ArrayList<>(allQueryTokens);
-//         }
+//         if (userTokens.isEmpty()) userTokens = new ArrayList<>(allQueryTokens);
+//         if (userTokens.isEmpty()) return fallbackMessage(lang);
 
-//         if (userTokens.isEmpty()) { // still empty -> fallback
-//             return fallbackMessage(lang);
-//         }
-
-//         // 3) Fetch candidates (LIKE). We'll call findCandidates with the full query and then with first tokens
-//         LinkedHashMap<Long, Faq> candidates = new LinkedHashMap<>(); // dedupe preserving order
-
-//         // Try full phrase first (helps when DB question contains whole phrase)
+//         // 4️⃣ Fetch candidates
+//         LinkedHashMap<Long, Faq> candidates = new LinkedHashMap<>();
 //         tryAddCandidates(rawQuery, lang, candidates);
-
-//         // Then try by tokens: up to TOKEN_FETCH_LIMIT tokens (to widen pool but limit DB calls)
 //         int lim = Math.min(TOKEN_FETCH_LIMIT, userTokens.size());
-//         for (int i = 0; i < lim; ++i) {
-//             tryAddCandidates(userTokens.get(i), lang, candidates);
-//         }
+//         for (int i = 0; i < lim; ++i) tryAddCandidates(userTokens.get(i), lang, candidates);
 
-//         if (candidates.isEmpty()) {
-//             return fallbackMessage(lang);
-//         }
+//         if (candidates.isEmpty()) return fallbackMessage(lang);
 
-//         // 4) Check normalized exact among candidates (handles punctuation differences)
+//         // 5️⃣ Check normalized exact among candidates
 //         String normalizedQuery = normalizeForCompare(rawQuery);
 //         for (Faq f : candidates.values()) {
-//             if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) {
-//                 return safeAnswer(f);
-//             }
+//             if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) return safeAnswer(f);
 //         }
 
-//         // 5) Score candidates by percentage-overlap
+//         // 6️⃣ Score candidates by token overlap
 //         Set<String> userTokenSet = new HashSet<>(userTokens);
 //         double bestScore = -1.0;
 //         Faq bestFaq = null;
@@ -244,24 +128,17 @@
 //         for (Faq f : candidates.values()) {
 //             String combined = (f.getQuestion() == null ? "" : f.getQuestion()) + " "
 //                     + (f.getAnswer() == null ? "" : f.getAnswer());
-
 //             Set<String> candTokens = extractWords(combined).stream()
 //                     .map(String::toLowerCase)
 //                     .collect(Collectors.toSet());
-
-//             // remove stopwords from candidate token set too
 //             candTokens.removeAll(stopwords);
 
 //             int matches = 0;
-//             for (String t : userTokenSet) {
-//                 if (candTokens.contains(t)) matches++;
-//             }
+//             for (String t : userTokenSet) if (candTokens.contains(t)) matches++;
 
 //             double score = userTokenSet.isEmpty() ? 0.0 : ((double) matches / userTokenSet.size());
-
 //             int qlen = (f.getQuestion() == null) ? Integer.MAX_VALUE : f.getQuestion().length();
 
-//             // Tie-breaker: higher score wins; if equal prefer shorter question (definition)
 //             if (score > bestScore + 1e-9 ||
 //                     (Math.abs(score - bestScore) < 1e-9 && qlen < bestQuestionLength)) {
 //                 bestScore = score;
@@ -270,19 +147,14 @@
 //             }
 //         }
 
-//         // 6) Return best candidate if above threshold, else fallback to shortest candidate
-//         if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE) {
-//             return safeAnswer(bestFaq);
-//         }
+//         if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE) return safeAnswer(bestFaq);
 
-//         // If no meaningful overlap, return the shortest candidate as a practical fallback
+//         // 7️⃣ Fallback to shortest candidate
 //         Faq fallback = candidates.values().stream()
 //                 .min(Comparator.comparingInt(a -> a.getQuestion() == null ? Integer.MAX_VALUE : a.getQuestion().length()))
 //                 .orElse(null);
 
-//         if (fallback != null) return safeAnswer(fallback);
-
-//         return fallbackMessage(lang);
+//         return fallback != null ? safeAnswer(fallback) : fallbackMessage(lang);
 //     }
 
 //     // ---------- helpers ----------
@@ -292,9 +164,7 @@
 //         try {
 //             List<Faq> found = faqRepository.findCandidates(keyword, lang);
 //             if (found != null) {
-//                 for (Faq f : found) {
-//                     if (f != null && f.getId() != null) out.putIfAbsent(f.getId(), f);
-//                 }
+//                 for (Faq f : found) if (f != null && f.getId() != null) out.putIfAbsent(f.getId(), f);
 //             }
 //         } catch (Exception e) {
 //             System.err.println("Candidate fetch failed for \"" + safeForLog(keyword) + "\": " + e.getMessage());
@@ -304,27 +174,18 @@
 //     private String safeAnswer(Faq f) {
 //         if (f == null) return fallbackMessage("EN");
 //         String a = f.getAnswer();
-//         if (a == null || a.isBlank()) return fallbackMessage("EN");
-//         return a.trim();
+//         return (a == null || a.isBlank()) ? fallbackMessage("EN") : a.trim();
 //     }
 
 //     private String fallbackMessage(String lang) {
-//         if ("BN".equalsIgnoreCase(lang)) {
-//             return "দুঃখিত, আমি এটির নির্দিষ্ট উত্তর খুঁজে পাইনি। অনুগ্রহ করে প্রশ্নটি অন্যভাবে লিখে দেখুন।";
-//         }
-//         return "Sorry, I couldn't find an answer. Please try rephrasing your question.";
-//     }
-
-//     private String normalizeLang(String language) {
-//         if (language == null) return "EN";
-//         String l = language.trim().toUpperCase();
-//         return l.startsWith("B") ? "BN" : "EN";
+//         return "BN".equalsIgnoreCase(lang)
+//                 ? "দুঃখিত, আমি এটির নির্দিষ্ট উত্তর খুঁজে পাইনি। অনুগ্রহ করে প্রশ্নটি অন্যভাবে লিখে দেখুন।"
+//                 : "Sorry, I couldn't find an answer. Please try rephrasing your question.";
 //     }
 
 //     private String normalizeForCompare(String text) {
 //         if (text == null) return "";
-//         List<String> words = extractWords(text);
-//         return String.join(" ", words).toLowerCase();
+//         return String.join(" ", extractWords(text)).toLowerCase();
 //     }
 
 //     private List<String> extractWords(String text) {
@@ -332,9 +193,7 @@
 //         String norm = Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
 //         Matcher m = WORD_PATTERN.matcher(norm);
 //         List<String> tokens = new ArrayList<>();
-//         while (m.find()) {
-//             tokens.add(m.group());
-//         }
+//         while (m.find()) tokens.add(m.group());
 //         return tokens;
 //     }
 
@@ -342,12 +201,31 @@
 //         if (s == null) return "";
 //         return s.replaceAll("[\\r\\n]+", " ").trim();
 //     }
+
+//     // --------- NEW: language detection ----------
+//     private String detectLanguage(String text) {
+//         if (text == null || text.isBlank()) return "EN";
+//         int bnCount = 0, enCount = 0;
+//         for (char c : text.toCharArray()) {
+//             if (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.BENGALI) bnCount++;
+//             else if (Character.isLetter(c) && c < 128) enCount++;
+//         }
+//         return bnCount > enCount ? "BN" : "EN";
+//     }
 // }
+
+//**************************************************************************************
+
 package com.example.faq.service;
 
 import com.example.faq.model.Faq;
 import com.example.faq.repository.FaqRepository;
 import org.springframework.stereotype.Service;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 import java.text.Normalizer;
 import java.util.*;
@@ -359,6 +237,7 @@ import java.util.stream.Collectors;
 public class FaqService {
 
     private final FaqRepository faqRepository;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public FaqService(FaqRepository faqRepository) {
         this.faqRepository = faqRepository;
@@ -381,7 +260,7 @@ public class FaqService {
     private static final double MIN_ACCEPTED_SCORE = 0.0;
 
     /**
-     * Main entry: automatically detects language and returns best DB answer.
+     * Main entry: automatically detects language and returns best DB answer + note.
      */
     public String getAnswer(String question) {
         if (question == null || question.isBlank()) {
@@ -395,7 +274,9 @@ public class FaqService {
         // 2️⃣ Try exact-match shortcut
         try {
             Faq exact = faqRepository.findExact(rawQuery, lang);
-            if (exact != null) return safeAnswer(exact);
+            if (exact != null) {
+                return safeAnswer(exact) + "\n\nNote: " + fetchExtraInfo(rawQuery);
+            }
         } catch (Exception e) {
             System.err.println("Exact-match query failed: " + e.getMessage());
         }
@@ -412,7 +293,8 @@ public class FaqService {
                 .collect(Collectors.toList());
 
         if (userTokens.isEmpty()) userTokens = new ArrayList<>(allQueryTokens);
-        if (userTokens.isEmpty()) return fallbackMessage(lang);
+        if (userTokens.isEmpty())
+            return fallbackMessage(lang) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
         // 4️⃣ Fetch candidates
         LinkedHashMap<Long, Faq> candidates = new LinkedHashMap<>();
@@ -420,12 +302,15 @@ public class FaqService {
         int lim = Math.min(TOKEN_FETCH_LIMIT, userTokens.size());
         for (int i = 0; i < lim; ++i) tryAddCandidates(userTokens.get(i), lang, candidates);
 
-        if (candidates.isEmpty()) return fallbackMessage(lang);
+        if (candidates.isEmpty())
+            return fallbackMessage(lang) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
         // 5️⃣ Check normalized exact among candidates
         String normalizedQuery = normalizeForCompare(rawQuery);
         for (Faq f : candidates.values()) {
-            if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) return safeAnswer(f);
+            if (normalizeForCompare(f.getQuestion()).equals(normalizedQuery)) {
+                return safeAnswer(f) + "\n\nNote: " + fetchExtraInfo(rawQuery);
+            }
         }
 
         // 6️⃣ Score candidates by token overlap
@@ -456,14 +341,16 @@ public class FaqService {
             }
         }
 
-        if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE) return safeAnswer(bestFaq);
+        if (bestFaq != null && bestScore > MIN_ACCEPTED_SCORE)
+            return safeAnswer(bestFaq) + "\n\nNote: " + fetchExtraInfo(rawQuery);
 
         // 7️⃣ Fallback to shortest candidate
         Faq fallback = candidates.values().stream()
                 .min(Comparator.comparingInt(a -> a.getQuestion() == null ? Integer.MAX_VALUE : a.getQuestion().length()))
                 .orElse(null);
 
-        return fallback != null ? safeAnswer(fallback) : fallbackMessage(lang);
+        return (fallback != null ? safeAnswer(fallback) : fallbackMessage(lang))
+                + "\n\nNote: " + fetchExtraInfo(rawQuery);
     }
 
     // ---------- helpers ----------
@@ -521,9 +408,65 @@ public class FaqService {
         }
         return bnCount > enCount ? "BN" : "EN";
     }
+
+    // --------- NEW: Fetch Wikipedia or HuggingFace ---------
+    private String fetchExtraInfo(String query) {
+        try {
+            // Wikipedia REST API
+            String url = "https://en.wikipedia.org/api/rest_v1/page/summary/" +
+                    query.trim().replace(" ", "_");
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "LegalFAQBot/1.0")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200 && resp.body().contains("\"extract\"")) {
+                String body = resp.body();
+                int idx = body.indexOf("\"extract\":\"");
+                if (idx != -1) {
+                    String extract = body.substring(idx + 11);
+                    extract = extract.split("\",\"")[0];
+                    return extract.replaceAll("\\\\n", " ").replaceAll("\\\\\"", "\"");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Wiki fetch failed: " + e.getMessage());
+        }
+
+        // HuggingFace fallback
+        try {
+            String apiKey = System.getenv("HUGGINGFACE_API_KEY");
+            if (apiKey == null || apiKey.isBlank()) return "(no extra info available)";
+
+            String payload = "{ \"inputs\": \"" + query.replace("\"", "'") + "\", " +
+                    "\"parameters\": { \"max_new_tokens\": 120, \"temperature\": 0.85 } }";
+
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"))
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
+                    .build();
+
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 200) {
+                String body = resp.body();
+                int start = body.indexOf("generated_text");
+                if (start != -1) {
+                    String cut = body.substring(start + 17);
+                    String out = cut.split("\"")[0];
+                    return out.trim();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("HF fetch failed: " + e.getMessage());
+        }
+
+        return "(no extra info available)";
+    }
 }
-
-
 
 
 
