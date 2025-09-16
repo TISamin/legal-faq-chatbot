@@ -99,10 +99,11 @@ public class FaqController {
 
 
  // inside your existing @RestController class
-@GetMapping("/api/health")
+@GetMapping("/health")
 public String health() {
     return "OK";
 }
+
 
 }
 
