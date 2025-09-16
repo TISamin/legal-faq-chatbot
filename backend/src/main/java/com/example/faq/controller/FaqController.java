@@ -96,5 +96,13 @@ public class FaqController {
     public String ask(@RequestParam String question) {
         return faqService.getAnswer(question);
     }
+
+
+ // inside your existing @RestController class
+@GetMapping("/api/health")
+public String health() {
+    return "OK";
+}
+
 }
 
